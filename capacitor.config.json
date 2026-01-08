@@ -1,0 +1,6 @@
+{
+  "appId": "com.artinus132.gamesimulator",
+  "appName": "TycoonSim",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
