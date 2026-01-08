@@ -1,0 +1,65 @@
+name: Build Android APK (Capacitor + Vite)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Build web (Vite)
+        run: npm run build
+
+      - name: Set up Java (JDK 11)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: temurin
+
+      - name: Setup Android SDK
+        uses: r0adkll/setup-android@v2
+        with:
+          api-level: 33
+          build-tools: '33.0.2'
+          components: platform-tools
+
+      - name: Ensure gradle wrapper executable
+        run: |
+          if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
+
+      - name: Add Android project (if not already present) and sync Capacitor
+        run: |
+          npx cap sync android || true
+        env:
+          ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+
+      - name: Build Android debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+        env:
+          ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+
+      - name: List APK outputs
+        run: find android -type f -path "*/build/outputs/apk/**/*.apk" -print || true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apks
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/**/*.apk
